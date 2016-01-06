@@ -52,6 +52,8 @@ RCSwitch::RCSwitch() {
   this->setReceiveTolerance(60);
   RCSwitch::nReceivedValue = NULL;
   #endif
+
+  RCSwitch::timings[0] = 0;
 }
 
 /**
@@ -781,39 +783,30 @@ bool RCSwitch::receiveProtocol3(unsigned int changeCount){
       }
 }
 
-void RCSwitch::handleInterrupt() {
-
-  static unsigned int duration;
+void RCSwitch::handleInterrupt()
+{
   static unsigned int changeCount;
   static unsigned long lastTime;
-  static unsigned int repeatCount;
-  
 
   long time = micros();
-  duration = time - lastTime;
- 
-  if (duration > RCSwitch::nSeparationLimit && duration > RCSwitch::timings[0] - 200 && duration < RCSwitch::timings[0] + 200) {
-    repeatCount++;
-    changeCount--;
-    if (repeatCount == 2) {
-      if (receiveProtocol1(changeCount) == false){
-        if (receiveProtocol2(changeCount) == false){
-          if (receiveProtocol3(changeCount) == false){
+  unsigned int duration = time - lastTime;
+
+  if (duration > RCSwitch::nSeparationLimit) {
+    if (RCSwitch::timings[0] != 0) {
+      if (receiveProtocol1(changeCount-1) == false){
+        if (receiveProtocol2(changeCount-1) == false){
+          if (receiveProtocol3(changeCount-1) == false){
             //failed
           }
         }
       }
-      repeatCount = 0;
     }
     changeCount = 0;
-  } else if (duration > RCSwitch::nSeparationLimit) {
-    changeCount = 0;
   }
- 
-  if (changeCount >= RCSWITCH_MAX_CHANGES) {
+
+  if (changeCount >= RCSWITCH_MAX_CHANGES)
     changeCount = 0;
-    repeatCount = 0;
-  }
+
   RCSwitch::timings[changeCount++] = duration;
   lastTime = time;  
 }
