@@ -47,11 +47,28 @@
 // We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
 #define RCSWITCH_MAX_CHANGES 67
 
-#define PROTOCOL3_SYNC_FACTOR   71
-#define PROTOCOL3_0_HIGH_CYCLES  4
-#define PROTOCOL3_0_LOW_CYCLES  11
-#define PROTOCOL3_1_HIGH_CYCLES  9
-#define PROTOCOL3_1_LOW_CYCLES   6
+typedef enum {
+  RC_PROTOCOL_1 = 0,
+  RC_PROTOCOL_2,
+  RC_PROTOCOL_3,
+  RC_PROTOCOL_4,
+  RC_PROTOCOL_5
+} RCProtocolId;
+
+typedef struct {
+  RCProtocolId id;
+  unsigned int pulseLength;
+  // tri-state symbols' definition
+  unsigned int sT0[4]; // HLHL
+  unsigned int sT1[4]; // HLHL
+  unsigned int sTF[4]; // HLHL
+  unsigned int sTS[2]; // HL
+  // bi-state symbols' definition
+  unsigned int s0[2];
+  unsigned int s1[2];
+  //
+  unsigned int repeatCount;
+} RCProtocol;
 
 class RCSwitch {
 
@@ -94,8 +111,8 @@ class RCSwitch {
     #if not defined( RCSwitchDisableReceiving )
     void setReceiveTolerance(int nPercent);
     #endif
-    void setProtocol(int nProtocol);
-    void setProtocol(int nProtocol, int nPulseLength);
+    void setProtocol(RCProtocolId protocolId);
+    void setProtocol(const RCProtocol &protocolId);
   
   private:
     char* getCodeWordB(int nGroupNumber, int nSwitchNumber, boolean bStatus);
@@ -116,15 +133,12 @@ class RCSwitch {
     
     #if not defined( RCSwitchDisableReceiving )
     static void handleInterrupt();
-    static bool receiveProtocol1(unsigned int changeCount);
-    static bool receiveProtocol2(unsigned int changeCount);
-    static bool receiveProtocol3(unsigned int changeCount);
+    static bool processPacket(unsigned int changeCount);
     int nReceiverInterrupt;
+
     #endif
     int nTransmitterPin;
-    int nPulseLength;
-    int nRepeatTransmit;
-    char nProtocol;
+    static RCProtocol protocol;
 
     #if not defined( RCSwitchDisableReceiving )
     static int nReceiveTolerance;
@@ -138,8 +152,7 @@ class RCSwitch {
      * timings[0] contains sync timing, followed by a number of bits
      */
     static unsigned int timings[RCSWITCH_MAX_CHANGES];
-
-    
 };
 
 #endif
+
